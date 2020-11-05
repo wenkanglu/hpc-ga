@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <time.h>
 
 #define DEFAULT_POP_SIZE 300 //bigger population is more costly
 #define DEFAULT_NUM_PARTICLES 30 //more PARTICLES is more costly
@@ -160,7 +161,7 @@ int breeding(box_pattern * box, int population_size, int x_max, int y_max,int nu
             do
             {
                 splitPoint = rand()%num_particles; //split chromosome at point
-            } while(splitPoint == 0 || splitPoint == num_particles - 1 || splitPoint == num_particles);
+            } while(splitPoint == 0 || splitPoint == num_particles - 1);
             new_generation[i] = crossover(new_generation[i], box[parentOne], box[parentTwo], splitPoint, num_particles); //first child
 
             new_generation[i+1] = crossover(new_generation[i+1], box[parentTwo], box[parentOne], splitPoint, num_particles); //second child
@@ -170,23 +171,19 @@ int breeding(box_pattern * box, int population_size, int x_max, int y_max,int nu
             if(mutation <= MUTATION_RATE)
             {
                 int mutated;
-                do
-                {
-                    mutated = rand() % num_particles;
-                } while(mutated == num_particles);
+                mutated = rand() % num_particles;
                 new_generation[i].particle[mutated].x_pos = (rand()%(x_max + 1));
                 new_generation[i].particle[mutated].y_pos = (rand()%(y_max + 1));
+                new_generation[i].fitness = calcFitness(new_generation[i], num_particles);
             }
             mutation = rand()/(double)RAND_MAX; //mutation second child
             if(mutation <= MUTATION_RATE)
             {
                 int mutated;
-                do
-                {
-                    mutated = rand() % num_particles;
-                } while(mutated == num_particles);
+                mutated = rand() % num_particles;
                 new_generation[i+1].particle[mutated].x_pos = (rand()%(x_max + 1));
                 new_generation[i+1].particle[mutated].y_pos = (rand()%(y_max + 1));
+                new_generation[i+1].fitness = calcFitness(new_generation[i+1], num_particles);
             }
         }
   
@@ -268,7 +265,8 @@ int main(int argc, char *argv[])
 
     printf("Starting optimization with particles = %d, population=%d, width=%d,length=%d for %d iterations\n", num_particles, population_size, x_max, y_max, iter);
 
-    int gen_count = 0;           
+    int gen_count = 0;
+    double total_time = 0;
 
     FILE *f = fopen("solution.txt", "w");
     printf("Writing dimensions to file\n");
@@ -292,6 +290,9 @@ int main(int argc, char *argv[])
         int gen = 0,highest = 0;
         int current_stagnant = 0;
         int max_stagnant = MAX_GEN/5;
+
+        clock_t begin = clock();
+
         while(gen < MAX_GEN)
         {
             if(current_stagnant >= max_stagnant)
@@ -311,6 +312,11 @@ int main(int argc, char *argv[])
             
             gen += 1;
         }
+
+        clock_t end = clock();
+        double time_spent = (double)(end - begin)/CLOCKS_PER_SEC;
+        total_time += time_spent;
+
         printf("# generations= %d \n", gen);
         printf("Best solution:\n");
         printbox(population[highest], num_particles);
@@ -320,6 +326,7 @@ int main(int argc, char *argv[])
             exit(1);
         }
         printboxFile(population[highest], f, num_particles);
+        printf("Time taken: %f", time_spent);
         printf("---------\n");
         gen_count += gen;
     }
@@ -330,6 +337,7 @@ int main(int argc, char *argv[])
     free(population); //release memory
 
     printf("Average generations: %f\n", (double)gen_count/(double)k);
+    printf("Average time spent per iteration: %f\n", (double)total_time/(double)k);
     return 0;
 }
 

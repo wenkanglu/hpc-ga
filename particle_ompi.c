@@ -6,7 +6,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <math.h>
+#include <omp.h>
 
 #define DEFAULT_POP_SIZE 300 //bigger population is more costly
 #define DEFAULT_NUM_PARTICLES 30 //more PARTICLES is more costly
@@ -159,8 +161,8 @@ int breeding(box_pattern * box, int population_size, int x_max, int y_max,int nu
         
             do
             {
-                splitPoint = rand()%num_particles; //split chromosome at point
-            } while(splitPoint == 0 || splitPoint == num_particles - 1 || splitPoint == num_particles);
+                splitPoint = rand()%num_particles; //spl/* code */it chromosome at point
+            } while(splitPoint == 0 || splitPoint == num_particles - 1);
             new_generation[i] = crossover(new_generation[i], box[parentOne], box[parentTwo], splitPoint, num_particles); //first child
 
             new_generation[i+1] = crossover(new_generation[i+1], box[parentTwo], box[parentOne], splitPoint, num_particles); //second child
@@ -176,6 +178,7 @@ int breeding(box_pattern * box, int population_size, int x_max, int y_max,int nu
                 } while(mutated == num_particles);
                 new_generation[i].particle[mutated].x_pos = (rand()%(x_max + 1));
                 new_generation[i].particle[mutated].y_pos = (rand()%(y_max + 1));
+                new_generation[i].fitness = calcFitness(new_generation[i], num_particles);
             }
             mutation = rand()/(double)RAND_MAX; //mutation second child
             if(mutation <= MUTATION_RATE)
@@ -187,6 +190,7 @@ int breeding(box_pattern * box, int population_size, int x_max, int y_max,int nu
                 } while(mutated == num_particles);
                 new_generation[i+1].particle[mutated].x_pos = (rand()%(x_max + 1));
                 new_generation[i+1].particle[mutated].y_pos = (rand()%(y_max + 1));
+                new_generation[i+1].fitness = calcFitness(new_generation[i+1], num_particles);
             }
         }
   
@@ -246,12 +250,15 @@ int breeding(box_pattern * box, int population_size, int x_max, int y_max,int nu
 
 int main(int argc, char *argv[])
 {
+    omp_set_num_threads(2);
     int population_size = DEFAULT_POP_SIZE;
     int x_max = X_DEFAULT;
     int y_max = Y_DEFAULT;
     int num_particles = DEFAULT_NUM_PARTICLES;
     int iter = ITERATIONS;
     int k,i;
+    int exchange_amount = population_size/10;
+
     if(argc >= 2)
     {
         population_size = atoi(argv[1]); //size population first command line argument
@@ -262,15 +269,17 @@ int main(int argc, char *argv[])
         }
         if(argc >= 5)
             num_particles = atoi(argv[4]);
-        if(argc == 6)
+        if(argc >= 6)
             iter = atoi(argv[5]);
+        if(argc == 7)
+            omp_set_num_threads(atoi(argv[6]));
     }
 
     printf("Starting optimization with particles = %d, population=%d, width=%d,length=%d for %d iterations\n", num_particles, population_size, x_max, y_max, iter);
 
-    int gen_count = 0;           
+    int gen_count = 0;       
 
-    FILE *f = fopen("solution.txt", "w");
+    FILE *f = fopen("solution_omp.txt", "w");
     printf("Writing dimensions to file\n");
     fprintf(f, "%d,%d\n", x_max, y_max); //write box dimensions as first line of file
     box_pattern * population;
@@ -282,46 +291,72 @@ int main(int argc, char *argv[])
     for(k=0; k<iter; k++)
     {   //k is number of times whole simulation is run
         // populate with initial population
-        printf("initializing population\n");
+        printf("Initializing population\n");
         initPopulation(population, population_size, x_max, y_max, num_particles);
         printf("=========%d\n", k);
 
-        double max_fitness = 0;
-        // main loop
-        int stop = 0;
-        int gen = 0,highest = 0;
-        int current_stagnant = 0;
-        int max_stagnant = MAX_GEN/5;
-        while(gen < MAX_GEN)
+        #pragma omp parallel private(gen_count)
         {
-            if(current_stagnant >= max_stagnant)
+            printf("running!")
+            double max_fitness = 0;
+            // main loop
+            int stop = 0;
+            int gen = 0,highest = 0;
+            int current_stagnant = 0;
+            int max_stagnant = MAX_GEN/10;
+            bool exchanged = false;
+
+            box_pattern pop_copy[population_size];
+            for(int j = 0; j < population_size; j++)
             {
-                printf("No new improvements after %d generations. Stopping.", max_stagnant);
-                break;
+                copybox(&pop_copy[j], &population[j], num_particles);
             }
 
-            int current_best = breeding(population, population_size, x_max, y_max, num_particles);
-            if(current_best > highest)
+            while(gen < MAX_GEN)
             {
-                highest = current_best;
-                current_stagnant = 0;
+                if(current_stagnant >= max_stagnant || gen == MAX_GEN/2)
+                {
+                    if(exchanged == false)
+                    {
+                        printf("Initiating exchange\n");
+                        //perform exchange
+                        current_stagnant = 0;
+                        exchanged = true;
+                    }
+                    if(gen != MAX_GEN/2)
+                    {
+                        printf("Stopping due to no improvements for %d generations after exchange", max_stagnant);
+                        break;
+                    }
+                }
+
+                int current_best = breeding(pop_copy, population_size, x_max, y_max, num_particles);
+                if(current_best > highest)
+                {
+                    highest = current_best;
+                    current_stagnant = 0;
+                }
+                else
+                    current_stagnant += 1;
+                
+                gen += 1;
             }
-            else
-                current_stagnant += 1;
-            
-            gen += 1;
+            #pragma omp critical
+            {
+                printf("GA for thread %d:\n", omp_get_thread_num());
+                printf("# generations = %d\n", gen);
+                printf("Best solution:\n");
+                printbox(pop_copy[highest], num_particles);
+                if (f == NULL)
+                {
+                    printf("Error opening file!\n");
+                    exit(1);
+                }
+                printboxFile(pop_copy[highest], f, num_particles);
+                printf("---------\n");
+            }
+            gen_count += gen;
         }
-        printf("# generations= %d \n", gen);
-        printf("Best solution:\n");
-        printbox(population[highest], num_particles);
-        if (f == NULL)
-        {
-            printf("Error opening file!\n");
-            exit(1);
-        }
-        printboxFile(population[highest], f, num_particles);
-        printf("---------\n");
-        gen_count += gen;
     }
     fclose(f);
 
