@@ -71,6 +71,8 @@ double calcFitness(box_pattern box,int num_particles)
             x = (double)box.particle[i].x_pos - (double)box.particle[j].x_pos;
             y = (double)box.particle[i].y_pos - (double)box.particle[j].y_pos;
             r=sqrt((x*x)+(y*y));
+            if(r == 0)
+                r = 0.9;
             tmp=2.0/r;
             //fitness-= 1.0/r; // electric repulsion
             //fitness-= pow(tmp,6); //purely repulsive function
@@ -277,7 +279,8 @@ int main(int argc, char *argv[])
 
     printf("Starting optimization with particles = %d, population=%d, width=%d,length=%d for %d iterations\n", num_particles, population_size, x_max, y_max, iter);
 
-    int gen_count = 0;       
+    int gen_count = 0;
+    double total_time = 0;
 
     FILE *f = fopen("solution_omp.txt", "w");
     printf("Writing dimensions to file\n");

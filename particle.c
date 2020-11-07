@@ -70,6 +70,8 @@ double calcFitness(box_pattern box,int num_particles)
             x = (double)box.particle[i].x_pos - (double)box.particle[j].x_pos;
             y = (double)box.particle[i].y_pos - (double)box.particle[j].y_pos;
             r=sqrt((x*x)+(y*y));
+            if(r == 0)
+                r = 0.9
             tmp=2.0/r;
             //fitness-= 1.0/r; // electric repulsion
             //fitness-= pow(tmp,6); //purely repulsive function
@@ -297,7 +299,7 @@ int main(int argc, char *argv[])
         {
             if(current_stagnant >= max_stagnant)
             {
-                printf("No new improvements after %d generations. Stopping.", max_stagnant);
+                printf("No new improvements after %d generations. Stopping.\n", max_stagnant);
                 break;
             }
 
@@ -314,6 +316,7 @@ int main(int argc, char *argv[])
         }
 
         clock_t end = clock();
+        
         double time_spent = (double)(end - begin)/CLOCKS_PER_SEC;
         total_time += time_spent;
 
@@ -326,7 +329,7 @@ int main(int argc, char *argv[])
             exit(1);
         }
         printboxFile(population[highest], f, num_particles);
-        printf("Time taken: %f", time_spent);
+        printf("Time taken: %f\n", time_spent);
         printf("---------\n");
         gen_count += gen;
     }

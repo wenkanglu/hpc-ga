@@ -150,17 +150,19 @@ int breeding(box_pattern * box, int population_size, int x_max, int y_max,int nu
             {   //two children
                 // Determine breeding pair, with tournament of 2 (joust)
                 int one, two, splitPoint;
+                one = rand()%(population_size);
                 do
                 {
-                    one = rand()%(population_size), two = rand()%(population_size);
+                    two = rand()%(population_size);
                 } while(one == two);
                 int parentOne = two;
                 if(box[one].fitness > box[two].fitness)
                     parentOne = one; //joust
             
+                one = rand()%(population_size);
                 do
                 {
-                    one = rand()%(population_size), two = rand()%(population_size);
+                    two = rand()%(population_size);
                 } while(one == two);
                 int parentTwo = two;
                 if(box[one].fitness > box[two].fitness)
@@ -301,7 +303,7 @@ int main(int argc, char *argv[])
         if(argc == 7)
             omp_set_num_threads(atoi(argv[6]));
     }
-
+    printf("Using %d threads\n", omp_get_max_threads());
     printf("Starting optimization with particles = %d, population=%d, width=%d,length=%d for %d iterations\n", num_particles, population_size, x_max, y_max, iter);
 
     int gen_count = 0;      
@@ -369,7 +371,7 @@ int main(int argc, char *argv[])
             exit(1);
         }
         printboxFile(population[highest], f, num_particles);
-        printf("Time taken: %f", time_spent);
+        printf("Time taken: %f\n", time_spent);
         printf("---------\n");
         gen_count += gen;
     }
