@@ -18,7 +18,7 @@ run_omp: particle_omp
 	python3 plot_solution.py solution_omp.txt
 
 run_ompi: particle_ompi
-	./particle_ompi 2000 100 100 10 5
+	mpirun -np 4 particle_ompi 2000 100 100 10 5
 	cat solution_ompi.txt
 	python3 plot_solution.py solution_ompi.txt
 

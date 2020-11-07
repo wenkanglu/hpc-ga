@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <math.h>
-#include <omp.h>
+#include <mpi.h>
 
 #define DEFAULT_POP_SIZE 300 //bigger population is more costly
 #define DEFAULT_NUM_PARTICLES 30 //more PARTICLES is more costly
@@ -252,7 +252,11 @@ int breeding(box_pattern * box, int population_size, int x_max, int y_max,int nu
 
 int main(int argc, char *argv[])
 {
-    omp_set_num_threads(2);
+    int rank, size;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
     int population_size = DEFAULT_POP_SIZE;
     int x_max = X_DEFAULT;
     int y_max = Y_DEFAULT;
@@ -273,18 +277,18 @@ int main(int argc, char *argv[])
             num_particles = atoi(argv[4]);
         if(argc >= 6)
             iter = atoi(argv[5]);
-        if(argc == 7)
-            omp_set_num_threads(atoi(argv[6]));
     }
 
-    printf("Starting optimization with particles = %d, population=%d, width=%d,length=%d for %d iterations\n", num_particles, population_size, x_max, y_max, iter);
+    FILE *f = fopen("solution_omp.txt", "w");
 
+    if(rank == 0)
+    {
+        printf("Starting optimization with particles = %d, population=%d, width=%d,length=%d for %d iterations\n", num_particles, population_size, x_max, y_max, iter);
+        printf("Writing dimensions to file\n");
+        fprintf(f, "%d,%d\n", x_max, y_max); //write box dimensions as first line of file
+    }
     int gen_count = 0;
     double total_time = 0;
-
-    FILE *f = fopen("solution_omp.txt", "w");
-    printf("Writing dimensions to file\n");
-    fprintf(f, "%d,%d\n", x_max, y_max); //write box dimensions as first line of file
     box_pattern * population;
 
     population = (box_pattern*) malloc(sizeof(box_pattern)*population_size); //allocate memory
@@ -294,72 +298,84 @@ int main(int argc, char *argv[])
     for(k=0; k<iter; k++)
     {   //k is number of times whole simulation is run
         // populate with initial population
-        printf("Initializing population\n");
-        initPopulation(population, population_size, x_max, y_max, num_particles);
-        printf("=========%d\n", k);
-
-        #pragma omp parallel private(gen_count)
+        if(rank == 0)
         {
-            printf("running!")
-            double max_fitness = 0;
-            // main loop
-            int stop = 0;
-            int gen = 0,highest = 0;
-            int current_stagnant = 0;
-            int max_stagnant = MAX_GEN/10;
-            bool exchanged = false;
+            printf("Initializing population\n");
+            initPopulation(population, population_size, x_max, y_max, num_particles);
+            //TODO: create approproate datatypes
+            //Broadcast initialised population from root thread to others
+            MPI_Bcast(population, population_size, box_pattern*, 0, MPI_COMM_WORLD);
+            printf("=========%d\n", k);
+        }
 
-            box_pattern pop_copy[population_size];
-            for(int j = 0; j < population_size; j++)
+        MPI_Barrier(MPI_COMM_WORLD);
+        printf("Thread %d received population!\n", rank);
+
+        double max_fitness = 0;
+        // main loop
+        int stop = 0;
+        int gen = 0,highest = 0;
+        int current_stagnant = 0;
+        int max_stagnant = MAX_GEN/10;
+        bool exchanged = false;
+
+        while(gen < MAX_GEN)
+        {
+            if(current_stagnant >= max_stagnant || gen == MAX_GEN/2)
             {
-                copybox(&pop_copy[j], &population[j], num_particles);
-            }
-
-            while(gen < MAX_GEN)
-            {
-                if(current_stagnant >= max_stagnant || gen == MAX_GEN/2)
+                if(exchanged == false)
                 {
-                    if(exchanged == false)
-                    {
-                        printf("Initiating exchange\n");
-                        //perform exchange
-                        current_stagnant = 0;
-                        exchanged = true;
-                    }
-                    if(gen != MAX_GEN/2)
-                    {
-                        printf("Stopping due to no improvements for %d generations after exchange", max_stagnant);
-                        break;
-                    }
-                }
-
-                int current_best = breeding(pop_copy, population_size, x_max, y_max, num_particles);
-                if(current_best > highest)
-                {
-                    highest = current_best;
+                    printf("Initiating exchange\n");
+                    //perform exchange
                     current_stagnant = 0;
+                    exchanged = true;
                 }
-                else
-                    current_stagnant += 1;
-                
-                gen += 1;
+                if(gen != MAX_GEN/2)
+                {
+                    printf("Stopping due to no improvements for %d generations after exchange", max_stagnant);
+                    break;
+                }
             }
-            #pragma omp critical
+
+            int current_best = breeding(population, population_size, x_max, y_max, num_particles);
+            if(current_best > highest)
             {
-                printf("GA for thread %d:\n", omp_get_thread_num());
+                highest = current_best;
+                current_stagnant = 0;
+            }
+            else
+                current_stagnant += 1;
+            
+            gen += 1;
+        }
+
+        int current = 0;
+        while(current < size)
+        {
+            if(rank == current)
+            {
+                printf("GA for thread %d:\n", rank);
                 printf("# generations = %d\n", gen);
                 printf("Best solution:\n");
-                printbox(pop_copy[highest], num_particles);
-                if (f == NULL)
-                {
-                    printf("Error opening file!\n");
-                    exit(1);
-                }
-                printboxFile(pop_copy[highest], f, num_particles);
-                printf("---------\n");
+                printbox(population[highest], num_particles);
             }
-            gen_count += gen;
+            rank++;
+            MPI_Barrier(MPI_COMM_WORLD);
         }
+        
+        if(rank == 0)
+        {
+            if (f == NULL)
+            {
+                printf("Error opening file!\n");
+                exit(1);
+            }
+            MPI_Gather(population[highest], 1, box_pattern, 1, box_pattern, 0, MPI_COMM_WORLD);
+            //TODO: find highest highest fitness from all threads
+            printboxFile(population[highest]/*change to highest fitness from all threads*/, f, num_particles);
+            printf("---------\n");
+        }
+        gen_count += gen;
     }
     fclose(f);
 
@@ -367,7 +383,8 @@ int main(int argc, char *argv[])
         free(population[i].particle); //release memory
     free(population); //release memory
 
-    printf("Average generations: %f\n", (double)gen_count/(double)k);
+    printf("Average generations for thread %d: %f\n", rank, (double)gen_count/(double)k);
+    MPI_Finalize();
     return 0;
 }
 
