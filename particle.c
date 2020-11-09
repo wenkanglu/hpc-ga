@@ -71,7 +71,7 @@ double calcFitness(box_pattern box,int num_particles)
             y = (double)box.particle[i].y_pos - (double)box.particle[j].y_pos;
             r=sqrt((x*x)+(y*y));
             if(r == 0)
-                r = 0.9
+                r = 0.9;
             tmp=2.0/r;
             //fitness-= 1.0/r; // electric repulsion
             //fitness-= pow(tmp,6); //purely repulsive function

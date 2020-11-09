@@ -72,6 +72,7 @@ double calcFitness(box_pattern box,int num_particles)
             y = (double)box.particle[i].y_pos - (double)box.particle[j].y_pos;
             r=sqrt((x*x)+(y*y));
             if(r == 0)
+                printf("INSIDE THE r==0!, %f\n", r);
                 r = 0.9;
             tmp=2.0/r;
             //fitness-= 1.0/r; // electric repulsion
@@ -85,6 +86,7 @@ double calcFitness(box_pattern box,int num_particles)
 /* Creates initial random population */
 void initPopulation(box_pattern * box, int population_size,int xmax,int ymax,int num_particles)
 {
+    printf("Here 1\n");
     int i,p;
     for(p = 0; p < population_size; p++)
     {
@@ -95,6 +97,7 @@ void initPopulation(box_pattern * box, int population_size,int xmax,int ymax,int
         }
         box[p].fitness=calcFitness(box[p],num_particles);
     }
+    printf("Here 2\n");
 }
 
 /* create child from parents */
@@ -249,6 +252,59 @@ int breeding(box_pattern * box, int population_size, int x_max, int y_max,int nu
         return highest;
 }
 
+void send_boxes(int start, int count, int num_particles, box_pattern* data, int dest, int tag, MPI_Comm comm)
+{
+    //find correct size for buffer
+    int size = 0;
+    int tmpsize;
+    MPI_Pack_size(count, MPI_DOUBLE, comm, &tmpsize);
+    size += tmpsize;
+    MPI_Pack_size(count*num_particles*2, MPI_INT, comm, &tmpsize);
+    size += tmpsize;
+
+    char buf[size];
+    int pos = 0;
+
+    for(int b = 0; b < count; ++b)
+    {
+        //for each box, pack fitness
+        MPI_Pack(&data[start+b].fitness, 1, MPI_DOUBLE, buf, size, &pos, comm);
+
+        //for each box, pack particle postions
+        for(int p = 0; p < num_particles; ++p)
+        {
+            MPI_Pack(&data[start+b].particle[p].x_pos, 1, MPI_INT, buf, size, &pos, comm);
+            MPI_Pack(&data[start+b].particle[p].y_pos, 1, MPI_INT, buf, size, &pos, comm);
+        }
+    }
+    MPI_Request request;
+    MPI_Isend(buf, pos, MPI_PACKED, dest, tag, comm, &request);
+}
+
+void recv_boxes(int start, int count, int num_particles, box_pattern* data, int src, int tag, MPI_Comm comm)
+{
+    MPI_Status status;
+    MPI_Probe(src, tag, comm, &status);
+    int size;
+    MPI_Get_count(&status, MPI_PACKED, &size);
+    char buf[size];
+    MPI_Recv(buf, size, MPI_PACKED, src, tag, comm, &status);
+
+    int pos = 0;
+
+    for(int b = 0; b < count; ++b)
+    {
+        //for each box, unpack fitness
+        MPI_Unpack(buf, size, &pos, &data[start+b].fitness, 1, MPI_DOUBLE, comm);
+
+        //for each box, unpack particle postions
+        for(int p = 0; p < num_particles; ++p)
+        {
+            MPI_Unpack(buf, size, &pos, &data[start+b].particle[p].x_pos, 1, MPI_INT, comm);
+            MPI_Unpack(buf, size, &pos, &data[start+b].particle[p].y_pos, 1, MPI_INT, comm);
+        }
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -263,7 +319,6 @@ int main(int argc, char *argv[])
     int num_particles = DEFAULT_NUM_PARTICLES;
     int iter = ITERATIONS;
     int k,i;
-    int exchange_amount = population_size/10;
 
     if(argc >= 2)
     {
@@ -279,6 +334,11 @@ int main(int argc, char *argv[])
             iter = atoi(argv[5]);
     }
 
+    int subpopulation_size = population_size/size;
+    int exchange_amount = subpopulation_size/10;
+    int exchange_freq = iter/200;
+    int stagnantcheck_freq = exchange_freq*5;
+
     FILE *f = fopen("solution_omp.txt", "w");
 
     if(rank == 0)
@@ -289,55 +349,47 @@ int main(int argc, char *argv[])
     }
     int gen_count = 0;
     double total_time = 0;
+
     box_pattern * population;
 
-    population = (box_pattern*) malloc(sizeof(box_pattern)*population_size); //allocate memory
-    for(i=0;i<population_size;i++)
-        population[i].particle = malloc(num_particles*sizeof(position));//allocate memory
-
+    population = (box_pattern*) malloc(sizeof(box_pattern)*subpopulation_size); //allocate memory
+    for(i=0;i<subpopulation_size;i++)
+        population[i].particle = malloc(num_particles*sizeof(position)); //allocate memory
+    if(rank == 0)
+        printf("Population size: %d, Subpop size: %d, Maxrank: %d\n", population_size, subpopulation_size, size);
     for(k=0; k<iter; k++)
     {   //k is number of times whole simulation is run
-        // populate with initial population
+        //populate with initial population for each process
         if(rank == 0)
-        {
-            printf("Initializing population\n");
-            initPopulation(population, population_size, x_max, y_max, num_particles);
-            //TODO: create approproate datatypes
-            //Broadcast initialised population from root thread to others
-            MPI_Bcast(population, population_size, box_pattern*, 0, MPI_COMM_WORLD);
             printf("=========%d\n", k);
-        }
-
-        MPI_Barrier(MPI_COMM_WORLD);
-        printf("Thread %d received population!\n", rank);
-
+        printf("Initializing population for island %d\n", rank);
+        initPopulation(population, subpopulation_size, x_max, y_max, num_particles);
+        printf("Here island %d/n", rank);
         double max_fitness = 0;
         // main loop
         int stop = 0;
-        int gen = 0,highest = 0;
+        int gen = 0, highest = 0;
         int current_stagnant = 0;
         int max_stagnant = MAX_GEN/10;
-        bool exchanged = false;
+        int exchange_count = 0;
 
         while(gen < MAX_GEN)
         {
-            if(current_stagnant >= max_stagnant || gen == MAX_GEN/2)
+            if(gen != 0 && gen%exchange_freq == 0) //check if it is time to migrate/exchange
             {
-                if(exchanged == false)
-                {
-                    printf("Initiating exchange\n");
-                    //perform exchange
-                    current_stagnant = 0;
-                    exchanged = true;
-                }
-                if(gen != MAX_GEN/2)
-                {
-                    printf("Stopping due to no improvements for %d generations after exchange", max_stagnant);
-                    break;
-                }
+                int send_to = (rank + 1 + exchange_count)%size;
+                int receive_from = (rank - 1 - exchange_count)%size;
+                printf("Island %d is ready to send individuals to island %d\n", rank, send_to);
+                send_boxes(exchange_count, exchange_amount, num_particles, population, send_to, 0, MPI_COMM_WORLD);
+
+                printf("Island %d is ready to receive individuals from island %d\n", rank, receive_from);
+                recv_boxes(exchange_count, exchange_amount, num_particles, population, receive_from, 0, MPI_COMM_WORLD);
+                printf("Island %d received individuals!\n", rank);
+
+                exchange_count += 1;
             }
 
-            int current_best = breeding(population, population_size, x_max, y_max, num_particles);
+            int current_best = breeding(population, subpopulation_size, x_max, y_max, num_particles);
             if(current_best > highest)
             {
                 highest = current_best;
@@ -345,14 +397,23 @@ int main(int argc, char *argv[])
             }
             else
                 current_stagnant += 1;
-            
+
+            if(gen != 0 && gen%stagnantcheck_freq == 0) //check if it is time to report/check stagnancy
+            {
+                int total_stagnant = 0;
+                MPI_Allreduce(&current_stagnant, &total_stagnant, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
+                if((double)total_stagnant/(double)size > max_stagnant) //break if average greater than max
+                    break;
+            }
+
             gen += 1;
         }
 
         int current = 0;
         while(current < size)
         {
-            if(rank == current)
+            if(rank==current)
             {
                 printf("GA for thread %d:\n", rank);
                 printf("# generations = %d\n", gen);
@@ -362,7 +423,34 @@ int main(int argc, char *argv[])
             rank++;
             MPI_Barrier(MPI_COMM_WORLD);
         }
-        
+
+        //find the highest fitness across all processes
+
+        int localmax[2];
+        int globalmax[2];
+        localmax[0] = population[highest].fitness;
+        localmax[1] = rank;
+        MPI_Allreduce(localmax, globalmax, 1, MPI_2INT, MPI_MAXLOC, MPI_COMM_WORLD);
+
+        box_pattern * global_bestbox = (box_pattern*) malloc(sizeof(box_pattern)); //allocate memory
+        global_bestbox[0].particle = malloc(num_particles*sizeof(position)); //allocate memory
+
+        if(globalmax[1] == 0) //if highest fitness on root
+        {
+            copybox(&population[highest], &global_bestbox[0], num_particles);
+        }
+        else
+        {
+            if(globalmax[1] == rank)
+            {
+                send_boxes(highest, 1, num_particles, population, 0, 1, MPI_COMM_WORLD);
+            }
+            else if(rank == 0)
+            {
+                recv_boxes(0, 1, num_particles, global_bestbox, globalmax[1], 1, MPI_COMM_WORLD);
+            } 
+        }
+
         if(rank == 0)
         {
             if (f == NULL)
@@ -370,16 +458,15 @@ int main(int argc, char *argv[])
                 printf("Error opening file!\n");
                 exit(1);
             }
-            MPI_Gather(population[highest], 1, box_pattern, 1, box_pattern, 0, MPI_COMM_WORLD);
-            //TODO: find highest highest fitness from all threads
-            printboxFile(population[highest]/*change to highest fitness from all threads*/, f, num_particles);
+            
+            printboxFile(global_bestbox[0], f, num_particles);
             printf("---------\n");
         }
         gen_count += gen;
     }
     fclose(f);
 
-    for(i = 0; i < population_size; i++)
+    for(i = 0; i < subpopulation_size; i++)
         free(population[i].particle); //release memory
     free(population); //release memory
 
