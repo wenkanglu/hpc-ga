@@ -374,11 +374,7 @@ int main(int argc, char *argv[])
             printf("=========%d\n", k);
         printf("Initializing population for island %d\n", rank);
         initPopulation(population, subpopulation_size, x_max, y_max, num_particles);
-<<<<<<< HEAD
-
-=======
         printf("Here island %d\n", rank);
->>>>>>> 6fa2761 (Optimised parent selection)
         double max_fitness = 0;
         // main loop
         int stop = 0;
