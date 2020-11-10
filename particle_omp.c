@@ -71,6 +71,8 @@ double calcFitness(box_pattern box,int num_particles)
             x = (double)box.particle[i].x_pos - (double)box.particle[j].x_pos;
             y = (double)box.particle[i].y_pos - (double)box.particle[j].y_pos;
             r=sqrt((x*x)+(y*y));
+            if(r == 0)
+                r = 0.9;
             tmp=2.0/r;
             //fitness-= 1.0/r; // electric repulsion
             //fitness-= pow(tmp,6); //purely repulsive function
@@ -149,24 +151,27 @@ int breeding(box_pattern * box, int population_size, int x_max, int y_max,int nu
             for (i = 0; i < population_size; i += 2)
             {   //two children
                 // Determine breeding pair, with tournament of 2 (joust)
-                int one, two, splitPoint;
-                one = rand()%(population_size);
+                int one, two, splitPoint, parentOne, parentTwo;
                 do
                 {
-                    two = rand()%(population_size);
-                } while(one == two);
-                int parentOne = two;
-                if(box[one].fitness > box[two].fitness)
-                    parentOne = one; //joust
-            
-                one = rand()%(population_size);
-                do
-                {
-                    two = rand()%(population_size);
-                } while(one == two);
-                int parentTwo = two;
-                if(box[one].fitness > box[two].fitness)
-                    parentTwo = one; //joust
+                    one = rand()%(population_size);
+                    do
+                    {
+                        two = rand()%(population_size);
+                    } while(one == two);
+                    parentOne = two;
+                    if(box[one].fitness > box[two].fitness)
+                        parentOne = one; //joust
+                
+                    one = rand()%(population_size);
+                    do
+                    {
+                        two = rand()%(population_size);
+                    } while(one == two);
+                    parentTwo = two;
+                    if(box[one].fitness > box[two].fitness)
+                        parentTwo = one; //joust
+                } while(parentOne == parentTwo);
             
                 do
                 {
