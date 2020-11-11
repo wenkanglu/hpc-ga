@@ -72,14 +72,18 @@ double calcFitness(box_pattern box,int num_particles)
             x = (double)box.particle[i].x_pos - (double)box.particle[j].x_pos;
             y = (double)box.particle[i].y_pos - (double)box.particle[j].y_pos;
             r=sqrt((x*x)+(y*y));
-            if(r < 0.01)
-            {
-                r = 1.0;
-            }
+            // if(r == 0)
+            //     r = 2.0;
             tmp=2.0/r;
             //fitness-= 1.0/r; // electric repulsion
             //fitness-= pow(tmp,6); //purely repulsive function
-            fitness+= (pow(tmp,12)-pow(tmp,6)); //Lennard-Jones function
+            if(r == 0)
+            {
+                fitness = 0;
+                break;
+            }
+            else
+                fitness+= (pow(tmp,12)-pow(tmp,6)); //Lennard-Jones function
         }
     }
     return fitness;

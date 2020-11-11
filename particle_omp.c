@@ -55,7 +55,7 @@ void printboxFile(box_pattern box,FILE *f,int num_particles )
     {
         fprintf(f,"%d,%d\t", box.particle[i].x_pos, box.particle[i].y_pos);
     }
-    fprintf(f,"%d,%d\n", box.particle[i].x_pos, box.particle[i].y_pos);
+    fprintf(f,"%d,%d, %f\n", box.particle[i].x_pos, box.particle[i].y_pos, box.fitness);
 }
 
 /* FITNESS FUNCTION  - this is key*/
@@ -71,12 +71,18 @@ double calcFitness(box_pattern box,int num_particles)
             x = (double)box.particle[i].x_pos - (double)box.particle[j].x_pos;
             y = (double)box.particle[i].y_pos - (double)box.particle[j].y_pos;
             r=sqrt((x*x)+(y*y));
-            if(r == 0)
-                r = 0.9;
+            // if(r == 0)
+            //     r = 2.0;
             tmp=2.0/r;
             //fitness-= 1.0/r; // electric repulsion
             //fitness-= pow(tmp,6); //purely repulsive function
-            fitness+= (pow(tmp,12)-pow(tmp,6)); //Lennard-Jones function
+            if(r == 0)
+            {
+                fitness = 0;
+                break;
+            }
+            else
+                fitness+= (pow(tmp,12)-pow(tmp,6)); //Lennard-Jones function
         }
     }
     return fitness;
