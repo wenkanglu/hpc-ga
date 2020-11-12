@@ -16,7 +16,7 @@
 // consts
 static const int X_DEFAULT = 20; //width of box
 static const int Y_DEFAULT = 20; //length of box
-static const double MUTATION_RATE = 0.10; //how often random mutations occur
+static const double MUTATION_RATE = 0.1; //how often random mutations occur
 static const double MAX_GEN = 1000; // maximum number of generations
 static const double ITERATIONS = 10; //number of times the whole process is run
 static const double TOLERANCE = 50; //not used... yet
@@ -55,7 +55,7 @@ void printboxFile(box_pattern box,FILE *f,int num_particles )
     {
         fprintf(f,"%d,%d\t", box.particle[i].x_pos, box.particle[i].y_pos);
     }
-    fprintf(f,"%d,%d, %f\n", box.particle[i].x_pos, box.particle[i].y_pos, box.fitness);
+    fprintf(f,"%d,%d\n", box.particle[i].x_pos, box.particle[i].y_pos);
 }
 
 /* FITNESS FUNCTION  - this is key*/
@@ -318,9 +318,13 @@ int main(int argc, char *argv[])
     printf("Starting optimization with particles = %d, population=%d, width=%d,length=%d for %d iterations\n", num_particles, population_size, x_max, y_max, iter);
 
     int gen_count = 0;      
-    double total_time = 0;     
+    double total_time = 0;
+    double total_fitness = 0;
 
-    FILE *f = fopen("solution_omp.txt", "w");
+    char file_name[100];
+    sprintf(file_name, "solution_omp_%d_%d_%d_%d_%d.txt", population_size, x_max, y_max, num_particles, iter);
+    FILE *f = fopen(file_name, "w");
+    FILE *results = fopen("results_omp.txt","a");
     printf("Writing dimensions to file\n");
     fprintf(f, "%d,%d\n", x_max, y_max); //write box dimensions as first line of file
     box_pattern * population;
@@ -362,7 +366,8 @@ int main(int argc, char *argv[])
             }
             else
                 current_stagnant += 1;
-            
+
+            total_fitness += (double)population[highest].fitness;
             gen += 1;
         }
 
@@ -386,14 +391,18 @@ int main(int argc, char *argv[])
         printf("---------\n");
         gen_count += gen;
     }
-    fclose(f);
 
     for(i = 0; i < population_size; i++)
         free(population[i].particle); //release memory
     free(population); //release memory
 
-    printf("Average generations: %f\n", (double)gen_count/(double)k);
-    printf("Average time spent per iteration: %f\n", (double)total_time/(double)k);
+    fprintf(results, "%s_%d_%d_%d_%d_%d\n", argv[0], population_size, x_max, y_max, num_particles, iter);
+    fprintf(results, "Average fitness: %f\n", (double)total_fitness/(double)k);
+    fprintf(results, "Average generations: %f\n", (double)gen_count/(double)k);
+    fprintf(results, "Average time spent per iteration: %f\n", (double)total_time/(double)k);
+    fprintf(results, "---------\n");
+    fclose(f);
+    fclose(results);
     return 0;
 }
 
