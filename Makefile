@@ -84,41 +84,41 @@ run_omp: particle_omp
 	# python3 plot_solution.py solution_omp.txt
 
 run_ompi: particle_ompi
-	mpirun -np 2 particle_ompi 1000 100 100 10 10
-	mpirun -np 2 particle_ompi 1000 100 100 20 10
-	mpirun -np 2 particle_ompi 1000 100 100 30 10
+	mpirun -np 4 particle_ompi 1000 100 100 10 10
+	mpirun -np 4 particle_ompi 1000 100 100 20 10
+	mpirun -np 4 particle_ompi 1000 100 100 30 10
 
-	mpirun -np 2 particle_ompi 1000 150 150 10 10
-	mpirun -np 2 particle_ompi 1000 150 150 20 10
-	mpirun -np 2 particle_ompi 1000 150 150 30 10
+	mpirun -np 4 particle_ompi 1000 150 150 10 10
+	mpirun -np 4 particle_ompi 1000 150 150 20 10
+	mpirun -np 4 particle_ompi 1000 150 150 30 10
 
-	mpirun -np 2 particle_ompi 1000 200 200 10 10
-	mpirun -np 2 particle_ompi 1000 200 200 20 10
-	mpirun -np 2 particle_ompi 1000 200 200 30 10
+	mpirun -np 4 particle_ompi 1000 200 200 10 10
+	mpirun -np 4 particle_ompi 1000 200 200 20 10
+	mpirun -np 4 particle_ompi 1000 200 200 30 10
 
-	mpirun -np 2 particle_ompi 2000 100 100 10 10
-	mpirun -np 2 particle_ompi 2000 100 100 20 10
-	mpirun -np 2 particle_ompi 2000 100 100 30 10
+	mpirun -np 4 particle_ompi 2000 100 100 10 10
+	mpirun -np 4 particle_ompi 2000 100 100 20 10
+	mpirun -np 4 particle_ompi 2000 100 100 30 10
 
-	mpirun -np 2 particle_ompi 2000 150 150 10 10
-	mpirun -np 2 particle_ompi 2000 150 150 20 10
-	mpirun -np 2 particle_ompi 2000 150 150 30 10
+	mpirun -np 4 particle_ompi 2000 150 150 10 10
+	mpirun -np 4 particle_ompi 2000 150 150 20 10
+	mpirun -np 4 particle_ompi 2000 150 150 30 10
 
-	mpirun -np 2 particle_ompi 2000 200 200 10 10
-	mpirun -np 2 particle_ompi 2000 200 200 20 10
-	mpirun -np 2 particle_ompi 2000 200 200 30 10
+	mpirun -np 4 particle_ompi 2000 200 200 10 10
+	mpirun -np 4 particle_ompi 2000 200 200 20 10
+	mpirun -np 4 particle_ompi 2000 200 200 30 10
 
-	mpirun -np 2 particle_ompi 5000 100 100 10 10
-	mpirun -np 2 particle_ompi 5000 100 100 20 10
-	mpirun -np 2 particle_ompi 5000 100 100 30 10
+	# mpirun -np 1 particle_ompi 5000 100 100 10 10
+	# mpirun -np 1 particle_ompi 5000 100 100 20 10
+	# mpirun -np 1 particle_ompi 5000 100 100 30 10
 
-	mpirun -np 2 particle_ompi 5000 150 150 10 10
-	mpirun -np 2 particle_ompi 5000 150 150 20 10
-	mpirun -np 2 particle_ompi 5000 150 150 30 10
+	# mpirun -np 1 particle_ompi 5000 150 150 10 10
+	# mpirun -np 1 particle_ompi 5000 150 150 20 10
+	# mpirun -np 1 particle_ompi 5000 150 150 30 10
 
-	mpirun -np 2 particle_ompi 5000 200 200 10 10
-	mpirun -np 2 particle_ompi 5000 200 200 20 10
-	mpirun -np 2 particle_ompi 5000 200 200 30 10
+	# mpirun -np 1 particle_ompi 5000 200 200 10 10
+	# mpirun -np 1 particle_ompi 5000 200 200 20 10
+	# mpirun -np 1 particle_ompi 5000 200 200 30 10
 	# mpirun -np 4 particle_ompi 2000 100 100 10 5
 	# cat solution_ompi.txt
 	# python3 plot_solution.py solution_ompi.txt

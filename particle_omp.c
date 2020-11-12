@@ -291,7 +291,7 @@ int breeding(box_pattern * box, int population_size, int x_max, int y_max,int nu
 
 int main(int argc, char *argv[])
 {
-    omp_set_num_threads(2);
+    omp_set_num_threads(1);
     int population_size = DEFAULT_POP_SIZE;
     int x_max = X_DEFAULT;
     int y_max = Y_DEFAULT;
@@ -367,7 +367,6 @@ int main(int argc, char *argv[])
             else
                 current_stagnant += 1;
 
-            total_fitness += (double)population[highest].fitness;
             gen += 1;
         }
 
@@ -390,6 +389,7 @@ int main(int argc, char *argv[])
         printf("Time taken: %f\n", time_spent);
         printf("---------\n");
         fprintf(results, "%f\n", (double)population[highest].fitness);
+        total_fitness += (double)population[highest].fitness;
         gen_count += gen;
     }
 
