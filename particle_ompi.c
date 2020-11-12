@@ -435,7 +435,7 @@ int main(int argc, char *argv[])
 
                     recv_boxes(0, exchange_amount, num_particles, population, exchange_partner, exchange_count+1, MPI_COMM_WORLD);
                 }
-                else //receive first
+                else if (rank < exchange_partner) //receive first
                 {
                     //printf("(Gen %d) Island %d is ready to exchange with %d\n", gen, rank, exchange_partner);
 
@@ -459,7 +459,7 @@ int main(int argc, char *argv[])
 
             if(gen != 0 && gen%stagnantcheck_freq == 0) //check if it is time to report/check stagnancy
             {
-                int total_stagnant = 0;
+                int total_stagnant = current_stagnant;
                 MPI_Allreduce(&current_stagnant, &total_stagnant, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
                 double ave_stagnant = (double)total_stagnant/(double)size;
