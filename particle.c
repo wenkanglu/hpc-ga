@@ -112,7 +112,7 @@ box_pattern crossover(box_pattern child, box_pattern parentOne, box_pattern pare
     }
     i--;
     if((rand()%(2) == 1) && (i < num_particles) &&(i >= 0)) //50% of time split in middle of particle, more mixing
-        child.particle[i].y_pos=parentTwo.particle[i].y_pos; //don't know if I like this tbh. Seems redundant.
+        child.particle[i].y_pos=parentTwo.particle[i].y_pos;
     
     for(i = splitPoint; i < num_particles; i++)
     {   //copy over parentTwo from splitPoint to end

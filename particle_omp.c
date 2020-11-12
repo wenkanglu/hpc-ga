@@ -184,7 +184,6 @@ int breeding(box_pattern * box, int population_size, int x_max, int y_max,int nu
                     splitPoint = rand()%num_particles; //split chromosome at point
                 } while(splitPoint == 0 || splitPoint == num_particles - 1);
                 new_generation[i] = crossover(new_generation[i], box[parentOne], box[parentTwo], splitPoint, num_particles); //first child
-                // slight caveat here where i+1 is equal to the index of another thread's starting index. problem?
                 new_generation[i+1] = crossover(new_generation[i+1], box[parentTwo], box[parentOne], splitPoint, num_particles); //second child
             
                 // Mutation first child

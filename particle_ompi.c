@@ -17,7 +17,7 @@
 // consts
 static const int X_DEFAULT = 20; //width of box
 static const int Y_DEFAULT = 20; //length of box
-static const double MUTATION_RATE = 0.10; //how often random mutations occur
+static const double MUTATION_RATE = 0.1; //how often random mutations occur
 static const double MAX_GEN = 1000; // maximum number of generations
 static const double ITERATIONS = 10; //number of times the whole process is run
 static const double TOLERANCE = 50; //not used... yet
@@ -348,16 +348,23 @@ int main(int argc, char *argv[])
     int exchange_freq = MAX_GEN/100;
     int stagnantcheck_freq = exchange_freq*5;
 
-    FILE *f = fopen("solution_ompi.txt", "w");
-
+    FILE *f;
+    FILE *results;
     if(rank == 0)
     {
         printf("Starting optimization with particles = %d, population=%d, width=%d,length=%d for %d iterations\n", num_particles, population_size, x_max, y_max, iter);
+
+        char file_name[100];
+        sprintf(file_name, "solution_ompi_%d_%d_%d_%d_%d.txt", population_size, x_max, y_max, num_particles, iter);
+        f = fopen(file_name, "w");
+        results = fopen("results_ompi.txt","a");
+        fprintf(results, "%s_%d_%d_%d_%d_%d\n", argv[0], population_size, x_max, y_max, num_particles, iter);
         printf("Writing dimensions to file\n");
         fprintf(f, "%d,%d\n", x_max, y_max); //write box dimensions as first line of file
     }
     int gen_count = 0;
     double total_time = 0;
+    double total_fitness = 0;
 
     box_pattern * population;
     box_pattern * exchange_boxes;
@@ -378,14 +385,17 @@ int main(int argc, char *argv[])
             printf("=========%d\n", k);
         printf("Initializing population for island %d\n", rank);
         initPopulation(population, subpopulation_size, x_max, y_max, num_particles);
-        printf("Here island %d\n", rank);
         double max_fitness = 0;
         // main loop
         int stop = 0;
         int gen = 0, highest = 0;
         int current_stagnant = 0;
-        int max_stagnant = MAX_GEN/10;
+        int max_stagnant = MAX_GEN*3/10;
         int exchange_count = 0;
+
+        double begin;
+        if(rank==0)
+            begin = MPI_Wtime();
 
         while(gen < MAX_GEN)
         {
@@ -419,29 +429,21 @@ int main(int argc, char *argv[])
 
                 if(rank > exchange_partner) //send first
                 {
-                    printf("(Gen %d) Island %d is ready to exchange with %d\n", gen, rank, exchange_partner);
+                    //printf("(Gen %d) Island %d is ready to exchange with %d\n", gen, rank, exchange_partner);
 
-                    //printf("----- %d sent to %d -----\n", rank, exchange_partner);
-                    //printbox(population[0], num_particles);
                     send_boxes(0, exchange_amount, num_particles, population, exchange_partner, exchange_count+1, MPI_COMM_WORLD);
 
                     recv_boxes(0, exchange_amount, num_particles, population, exchange_partner, exchange_count+1, MPI_COMM_WORLD);
-                    //printf("----- %d received from %d -----\n", rank, exchange_partner);
-                    //printbox(population[0], num_particles);
                 }
                 else //receive first
                 {
-                    printf("(Gen %d) Island %d is ready to exchange with %d\n", gen, rank, exchange_partner);
+                    //printf("(Gen %d) Island %d is ready to exchange with %d\n", gen, rank, exchange_partner);
 
                     for(int b=0; b<exchange_amount; ++b) //copy of individuals to exchange
                         copybox(&exchange_boxes[b], &population[b], num_particles);
 
                     recv_boxes(0, exchange_amount, num_particles, population, exchange_partner, exchange_count+1, MPI_COMM_WORLD);
-                    //printf("----- %d received from %d -----\n", rank, exchange_partner);
-                    //printbox(population[0], num_particles);
 
-                    //printf("----- %d sent to %d -----\n", rank, exchange_partner);
-                    //printbox(exchange_boxes[0], num_particles);
                     send_boxes(0, exchange_amount, num_particles, exchange_boxes, exchange_partner, exchange_count+1, MPI_COMM_WORLD);
                 }
             }
@@ -521,6 +523,10 @@ int main(int argc, char *argv[])
 
         if(rank == 0)
         {
+            double end = MPI_Wtime();
+            double time_spent = (double)(end - begin);
+            total_time += time_spent;
+
             printf("Best fitness found on island %d\n", globalmax.index);
             printf("# generations = %d\n", gen);
             printf("Solution:\n");
@@ -534,11 +540,13 @@ int main(int argc, char *argv[])
             }
             
             printboxFile(global_bestbox, f, num_particles);
+            printf("Time taken: %f\n", time_spent);
             printf("---------\n");
+            fprintf(results, "%f\n", (double)global_bestbox.fitness);
+            total_fitness += global_bestbox.fitness;
         }
         gen_count += gen;
     }
-    fclose(f);
 
     for(i = 0; i < subpopulation_size; i++)
         free(population[i].particle); //release memory
@@ -547,7 +555,15 @@ int main(int argc, char *argv[])
         free(exchange_boxes[i].particle);
     free(exchange_boxes);
 
-    printf("Average generations for thread %d: %f\n", rank, (double)gen_count/(double)k);
+    if(rank==0)
+    {
+        fprintf(results, "Average fitness: %f\n", (double)total_fitness/(double)k);
+        fprintf(results, "Average generations: %f\n", (double)gen_count/(double)k);
+        fprintf(results, "Average time spent per iteration: %f\n", (double)total_time/(double)k);
+        fprintf(results, "---------\n");
+        fclose(f);
+        fclose(results);
+    }
     MPI_Finalize();
     return 0;
 }
