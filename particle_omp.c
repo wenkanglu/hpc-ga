@@ -325,6 +325,7 @@ int main(int argc, char *argv[])
     sprintf(file_name, "solution_omp_%d_%d_%d_%d_%d.txt", population_size, x_max, y_max, num_particles, iter);
     FILE *f = fopen(file_name, "w");
     FILE *results = fopen("results_omp.txt","a");
+    fprintf(results, "%s_%d_%d_%d_%d_%d\n", argv[0], population_size, x_max, y_max, num_particles, iter);
     printf("Writing dimensions to file\n");
     fprintf(f, "%d,%d\n", x_max, y_max); //write box dimensions as first line of file
     box_pattern * population;
@@ -389,6 +390,7 @@ int main(int argc, char *argv[])
         printboxFile(population[highest], f, num_particles);
         printf("Time taken: %f\n", time_spent);
         printf("---------\n");
+        fprintf(results, "%f\n", (double)population[highest].fitness);
         gen_count += gen;
     }
 
@@ -396,7 +398,6 @@ int main(int argc, char *argv[])
         free(population[i].particle); //release memory
     free(population); //release memory
 
-    fprintf(results, "%s_%d_%d_%d_%d_%d\n", argv[0], population_size, x_max, y_max, num_particles, iter);
     fprintf(results, "Average fitness: %f\n", (double)total_fitness/(double)k);
     fprintf(results, "Average generations: %f\n", (double)gen_count/(double)k);
     fprintf(results, "Average time spent per iteration: %f\n", (double)total_time/(double)k);
