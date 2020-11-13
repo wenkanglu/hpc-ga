@@ -72,8 +72,6 @@ double calcFitness(box_pattern box,int num_particles)
             x = (double)box.particle[i].x_pos - (double)box.particle[j].x_pos;
             y = (double)box.particle[i].y_pos - (double)box.particle[j].y_pos;
             r=sqrt((x*x)+(y*y));
-            // if(r == 0)
-            //     r = 2.0;
             tmp=2.0/r;
             //fitness-= 1.0/r; // electric repulsion
             //fitness-= pow(tmp,6); //purely repulsive function
@@ -346,7 +344,7 @@ int main(int argc, char *argv[])
     int subpopulation_size = population_size/size;
     int exchange_amount = subpopulation_size/10;
     int exchange_freq = MAX_GEN/100;
-    int stagnantcheck_freq = exchange_freq*5;
+    int tolerancecheck_freq = exchange_freq*5;
 
     FILE *f;
     FILE *results;
@@ -389,8 +387,8 @@ int main(int argc, char *argv[])
         // main loop
         int stop = 0;
         int gen = 0, highest = 0;
-        int current_stagnant = 0;
-        int max_stagnant = MAX_GEN*3/10;
+        int current_tolerance = 0;
+        int max_tolerance = MAX_GEN*3/10;
         int exchange_count = 0;
 
         double begin;
@@ -452,21 +450,21 @@ int main(int argc, char *argv[])
             if(current_best > highest)
             {
                 highest = current_best;
-                current_stagnant = 0;
+                current_tolerance = 0;
             }
             else
-                current_stagnant += 1;
+                current_tolerance += 1;
 
-            if(gen != 0 && gen%stagnantcheck_freq == 0) //check if it is time to report/check stagnancy
+            if(gen != 0 && gen%tolerancecheck_freq == 0) //check if it is time to report/check tolerance
             {
-                int total_stagnant = current_stagnant;
-                MPI_Allreduce(&current_stagnant, &total_stagnant, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+                int total_tolerance = current_tolerance;
+                MPI_Allreduce(&current_tolerance, &total_tolerance, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-                double ave_stagnant = (double)total_stagnant/(double)size;
-                if(ave_stagnant > max_stagnant) //break if average greater than max
+                double ave_tolerance = (double)total_tolerance/(double)size;
+                if(ave_tolerance > max_tolerance) //break if average greater than max
                 {
                     if(rank==0)
-                        printf("STOPPING: Average stagnancy (%f) is larger than max (%d)\n", ave_stagnant, max_stagnant);
+                        printf("STOPPING: Average tolerance (%f) is larger than max (%d)\n", ave_tolerance, max_tolerance);
                     break;
                 }
             }

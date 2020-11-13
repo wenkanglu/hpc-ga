@@ -70,8 +70,6 @@ double calcFitness(box_pattern box,int num_particles)
             x = (double)box.particle[i].x_pos - (double)box.particle[j].x_pos;
             y = (double)box.particle[i].y_pos - (double)box.particle[j].y_pos;
             r=sqrt((x*x)+(y*y));
-            // if(r == 0)
-            //     r = 2.0;
             tmp=2.0/r;
             //fitness-= 1.0/r; // electric repulsion
             //fitness-= pow(tmp,6); //purely repulsive function
@@ -305,16 +303,16 @@ int main(int argc, char *argv[])
         // main loop
         int stop = 0;
         int gen = 0,highest = 0;
-        int current_stagnant = 0;
-        int max_stagnant = MAX_GEN/5;
+        int current_tolerance = 0;
+        int max_tolerance = MAX_GEN/5;
 
         clock_t begin = clock();
 
         while(gen < MAX_GEN)
         {
-            if(current_stagnant >= max_stagnant)
+            if(current_tolerance >= max_tolerance)
             {
-                printf("No new improvements after %d generations. Stopping.\n", max_stagnant);
+                printf("No new improvements after %d generations. Stopping.\n", max_tolerance);
                 break;
             }
 
@@ -322,10 +320,10 @@ int main(int argc, char *argv[])
             if(current_best > highest)
             {
                 highest = current_best;
-                current_stagnant = 0;
+                current_tolerance = 0;
             }
             else
-                current_stagnant += 1;
+                current_tolerance += 1;
             
             gen += 1;
         }

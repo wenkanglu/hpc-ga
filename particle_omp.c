@@ -291,7 +291,7 @@ int breeding(box_pattern * box, int population_size, int x_max, int y_max,int nu
 
 int main(int argc, char *argv[])
 {
-    omp_set_num_threads(1);
+    // omp_set_num_threads(8);
     int population_size = DEFAULT_POP_SIZE;
     int x_max = X_DEFAULT;
     int y_max = Y_DEFAULT;
@@ -344,17 +344,17 @@ int main(int argc, char *argv[])
         // main loop
         int stop = 0;
         int gen = 0,highest = 0;
-        int current_stagnant = 0;
-        int max_stagnant = MAX_GEN/5;
+        int current_tolerance = 0;
+        int max_tolerance = MAX_GEN/5;
 
         // clock_t begin = clock();
         double begin = omp_get_wtime();
 
         while(gen < MAX_GEN)
         {
-            if(current_stagnant >= max_stagnant)
+            if(current_tolerance >= max_tolerance)
             {
-                printf("No new improvements after %d generations. Stopping.\n", max_stagnant);
+                printf("No new improvements after %d generations. Stopping.\n", max_tolerance);
                 break;
             }
 
@@ -362,10 +362,10 @@ int main(int argc, char *argv[])
             if(current_best > highest)
             {
                 highest = current_best;
-                current_stagnant = 0;
+                current_tolerance = 0;
             }
             else
-                current_stagnant += 1;
+                current_tolerance += 1;
 
             gen += 1;
         }

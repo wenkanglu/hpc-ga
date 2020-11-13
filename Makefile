@@ -9,120 +9,27 @@ particle_ompi: particle_ompi.c
 
 run: particle
 	./particle 1000 100 100 10 10
-	./particle 1000 100 100 20 10
-	./particle 1000 100 100 30 10
-
-	./particle 1000 150 150 10 10
-	./particle 1000 150 150 20 10
-	./particle 1000 150 150 30 10
-
-	./particle 1000 200 200 10 10
-	./particle 1000 200 200 20 10
-	./particle 1000 200 200 30 10
-
-	./particle 2000 100 100 10 10
-	./particle 2000 100 100 20 10
-	./particle 2000 100 100 30 10
-
-	./particle 2000 150 150 10 10
-	./particle 2000 150 150 20 10
-	./particle 2000 150 150 30 10
-
-	./particle 2000 200 200 10 10
-	./particle 2000 200 200 20 10
-	./particle 2000 200 200 30 10
-
-	./particle 5000 100 100 10 10
-	./particle 5000 100 100 20 10
-	./particle 5000 100 100 30 10
-
-	./particle 5000 150 150 10 10
-	./particle 5000 150 150 20 10
-	./particle 5000 150 150 30 10
-
-	./particle 5000 200 200 10 10
-	./particle 5000 200 200 20 10
-	./particle 5000 200 200 30 10
-	# python3 plot_solution.py solution.txt
+	cat solution_1000_100_100_10_10.txt
+	cat results.txt
+	# don't forget to input the correct file name (not just solutions.txt)
+	python3 plot_solution.py solution_1000_100_100_10_10.txt
 
 run_omp: particle_omp
 	./particle_omp 1000 100 100 10 10
-	./particle_omp 1000 100 100 20 10
-	./particle_omp 1000 100 100 30 10
-
-	./particle_omp 1000 150 150 10 10
-	./particle_omp 1000 150 150 20 10
-	./particle_omp 1000 150 150 30 10
-
-	./particle_omp 1000 200 200 10 10
-	./particle_omp 1000 200 200 20 10
-	./particle_omp 1000 200 200 30 10
-
-	./particle_omp 2000 100 100 10 10
-	./particle_omp 2000 100 100 20 10
-	./particle_omp 2000 100 100 30 10
-
-	./particle_omp 2000 150 150 10 10
-	./particle_omp 2000 150 150 20 10
-	./particle_omp 2000 150 150 30 10
-
-	./particle_omp 2000 200 200 10 10
-	./particle_omp 2000 200 200 20 10
-	./particle_omp 2000 200 200 30 10
-
-	./particle_omp 5000 100 100 10 10
-	./particle_omp 5000 100 100 20 10
-	./particle_omp 5000 100 100 30 10
-
-	./particle_omp 5000 150 150 10 10
-	./particle_omp 5000 150 150 20 10
-	./particle_omp 5000 150 150 30 10
-
-	./particle_omp 5000 200 200 10 10
-	./particle_omp 5000 200 200 20 10
-	./particle_omp 5000 200 200 30 10
-	# python3 plot_solution.py solution_omp.txt
+	cat solution_omp_1000_100_100_10_10.txt
+	cat results_omp.txt
+	# don't forget to input the correct file name (not just solutions.txt)
+	python3 plot_solution.py solution_omp_1000_100_100_10_10.txt
 
 run_ompi: particle_ompi
+	# population size must be divisible by the number of processors (islands) where each has an EVEN amount of solutions
 	mpirun -np 4 particle_ompi 1000 100 100 10 10
-	mpirun -np 4 particle_ompi 1000 100 100 20 10
-	mpirun -np 4 particle_ompi 1000 100 100 30 10
+	cat solution_ompi_1000_100_100_10_10.txt
+	cat results_ompi.txt
+	# don't forget to input the correct file name (not just solutions.txt)
+	python3 plot_solution.py solution_ompi_1000_100_100_10_10.txt
 
-	mpirun -np 4 particle_ompi 1000 150 150 10 10
-	mpirun -np 4 particle_ompi 1000 150 150 20 10
-	mpirun -np 4 particle_ompi 1000 150 150 30 10
-
-	mpirun -np 4 particle_ompi 1000 200 200 10 10
-	mpirun -np 4 particle_ompi 1000 200 200 20 10
-	mpirun -np 4 particle_ompi 1000 200 200 30 10
-
-	mpirun -np 4 particle_ompi 2000 100 100 10 10
-	mpirun -np 4 particle_ompi 2000 100 100 20 10
-	mpirun -np 4 particle_ompi 2000 100 100 30 10
-
-	mpirun -np 4 particle_ompi 2000 150 150 10 10
-	mpirun -np 4 particle_ompi 2000 150 150 20 10
-	mpirun -np 4 particle_ompi 2000 150 150 30 10
-
-	mpirun -np 4 particle_ompi 2000 200 200 10 10
-	mpirun -np 4 particle_ompi 2000 200 200 20 10
-	mpirun -np 4 particle_ompi 2000 200 200 30 10
-
-	# mpirun -np 1 particle_ompi 5000 100 100 10 10
-	# mpirun -np 1 particle_ompi 5000 100 100 20 10
-	# mpirun -np 1 particle_ompi 5000 100 100 30 10
-
-	# mpirun -np 1 particle_ompi 5000 150 150 10 10
-	# mpirun -np 1 particle_ompi 5000 150 150 20 10
-	# mpirun -np 1 particle_ompi 5000 150 150 30 10
-
-	# mpirun -np 1 particle_ompi 5000 200 200 10 10
-	# mpirun -np 1 particle_ompi 5000 200 200 20 10
-	# mpirun -np 1 particle_ompi 5000 200 200 30 10
-	# mpirun -np 4 particle_ompi 2000 100 100 10 5
-	# cat solution_ompi.txt
-	# python3 plot_solution.py solution_ompi.txt
-
+# remove all outputs
 clean_all:
 	rm -f particle
 	rm -f particle_omp
@@ -130,8 +37,8 @@ clean_all:
 	rm -f solution*.*
 	rm -f results*.*
 
+# retain solutions and results
 clean:
 	rm -f particle
 	rm -f particle_omp
 	rm -f particle_ompi
-
