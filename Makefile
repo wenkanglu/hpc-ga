@@ -1,3 +1,8 @@
+all: particle.c particle_omp.c particle_ompi.c
+	/usr/bin/gcc -I/usr/include -L/usr/lib particle.c -o particle -lm
+	/usr/bin/gcc -I/usr/include -L/usr/lib particle_omp.c -fopenmp -o particle_omp -lm
+	mpicc -I/usr/include -L/usr/lib particle_ompi.c -o particle_ompi -lm
+
 particle: particle.c
 	 /usr/bin/gcc -I/usr/include -L/usr/lib particle.c -o particle -lm
 
@@ -14,6 +19,9 @@ run: particle
 	# don't forget to input the correct file name (not just solutions.txt)
 	python3 plot_solution.py solution_1000_100_100_10_10.txt
 
+# there is an OPTIONAL input parameter at the end to set the number of threads
+# used (so you don't have to export OMP_NUM_THREADS every time)
+# example (for 4 threads): ./particle_omp 1000 100 100 10 10 4
 run_omp: particle_omp
 	./particle_omp 1000 100 100 10 10
 	cat solution_omp_1000_100_100_10_10.txt
@@ -22,7 +30,8 @@ run_omp: particle_omp
 	python3 plot_solution.py solution_omp_1000_100_100_10_10.txt
 
 run_ompi: particle_ompi
-	# population size must be divisible by the number of processors (islands) where each has an EVEN amount of solutions
+	# population size must be divisible by the number of processors (islands)
+	# where each has an EVEN amount of solutions
 	mpirun -np 4 particle_ompi 1000 100 100 10 10
 	cat solution_ompi_1000_100_100_10_10.txt
 	cat results_ompi.txt
